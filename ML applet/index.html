@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <script src="log.js"></script>
+    <script src="main.js"></script>
+    <style>
+        body{
+            background: gray;
+        }
+        canvas{
+            background: white;
+        }
+        #logElement{
+            background: lightblue;
+            text-shadow: 1px 1px 1px 1px white
+        }
+        #logElement div{
+            background-color:aquamarine;
+            margin: 10px;
+            display:inline-block;
+            width:min-content
+        }
+        #logElement p{
+            width: max-content;
+        }
+        #logElement canvas{
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div style="position: fixed">
+    <button onclick="togglePlay(this)">play</button>
+    <button onclick="step()">step</button><br>
+    <button onclick="step(parseInt(this.nextElementSibling.value) )">step N</button>
+    <input type="number" min=1 max=10000 value="1">
+    </div>
+    <br>
+    <!-- <canvas id=canvas width="400" height="400"></canvas> -->
+    <div id=logElement>
+        <hr>
+    </div>
+</body>
+</html>

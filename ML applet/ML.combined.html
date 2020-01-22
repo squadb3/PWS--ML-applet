@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Gradient Decent Demo</title>
+    <script>
+    function log(values='', ...args){
+    if (args.length > 0){
+        let div = document.createElement('div');
+        let html = '';
+        for (let arg of args){
+            if(typeof arg =='function'){
+                let src = arg.toString()+' ';
+                for (let i in values){
+                    re = new RegExp(`([>\\(\\,\\*\\/\\+\\-\\=]+)${i}([ \\)\\,\\*\\/\\+\\-\\=]+)`, 'g');
+                    src = src.replace(re, `$1${values[i].toPrecision(2)}$2`);
+                }
+                const parts = src.split('=>');
+                let body = parts.pop();
+                body = body.replace(/([\w]*)(\([\w,]*\))(\([\w,]*\))/g, '$1<sub>$2</sub>$3');
+                let target = parts.pop();
+                let consts = parts.pop();
+                if (values){
+                    const constsAr = consts.replace(/(\(|\))/g, '').split(',').map(v=>parseFloat(v));
+                    let result = arg(...constsAr)(parseFloat(target.replace(/(\(|\))/g, '')) );
+                    html+=`<p class='func'>${arg.name}<sub>${consts}</sub>${target} = ${body} = ${result.toPrecision(2) }</p>`;
+                } else {
+                    html+=`<p class='func'>${arg.name}<sub>${consts}</sub>${target} = ${body}</p>`;
+                }
+            }
+            if (typeof arg == 'string'){
+                html+=`<p class=text>${arg}</p>`
+            }
+            if (typeof arg == 'object'){
+                html+=`<p class=text>${JSON.stringify(arg)}</p>`
+            }
+        }
+        div.innerHTML = html;
+        logElement.insertBefore(div, logElement.firstChild);
+    } else {
+        let text = document.createElement('p');
+        text.innerHTML = `${values}<br>`;
+        logElement.insertBefore(text, logElement.firstChild);
+        logElement.insertBefore(document.createElement('hr'), logElement.firstChild);
+    }
+}
+
+function draw(func, minX=0, maxX=1, dx=0.01, width=200, height=200, xs=[], ys=[], rSize=10, padding=40,header=func.name){
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height= height;
+    const ctx = canvas.getContext('2d');
+    // ctx.scale(1,-1);
+    // ctx.translate(0,-height);
+    ctx.strokeStyle = "green";
+    ctx.lineWidth = 5;
+    let minY = Infinity;
+    let maxY = -Infinity;
+    for (let x = minX; x <= maxX; x+=dx){
+        let y = func(x);
+        if (y < minY)minY=y;
+        if (y > maxY)maxY=y;
+    }
+    for (let i in xs){
+        let x = xs[i];
+        let y = ys[i];
+        if (y < minY)minY=y;
+        if (y > maxY)maxY=y;
+    }
+    const sx = (width-padding*2)/(maxX-minX);
+    const sy = (height-padding*2)/(maxY-minY);
+
+    for (let i in xs){
+        const x = xs[i];
+        const y = ys[i];
+        ctx.fillRect((x-minX)*sx-0.5*rSize+padding,(y-minY)*sy-0.5*rSize+padding, rSize,rSize);
+    }
+    ctx.fillStyle = 'red';
+
+    ctx.beginPath();
+    for (let x = minX; x <= maxX; x+=dx){
+        let y = func(x);
+        ctx.lineTo((x-minX)*sx+padding, (y-minY)*sy+padding);
+    }
+    ctx.stroke();
+    // ctx.scale(1,-1);
+    // ctx.translate(0,-height);
+
+    ctx.font = '30px Arial';
+    ctx.fillText(header, 100,30);
+    ctx.font = '10px Arial';
+
+    ctx.fillText(`(${minX.toPrecision(1)}, ${minY.toPrecision(1)})`, 10,10);
+    ctx.fillText(`(${maxX.toPrecision(1)}, ${minY.toPrecision(1)})`, width-60,10);
+    ctx.fillText(`(${minX.toPrecision(1)}, ${maxY.toPrecision(1)})`, 10,height-10);
+    ctx.fillText(`(${maxX.toPrecision(1)}, ${maxY.toPrecision(1)})`, width-60,height-10);
+    logElement.insertBefore(canvas, logElement.firstChild);
+}
+
+
+    </script>
+    <script>
+    const Fx = (a,b)=>(x)=>a+b*x;
+const fa = (b,x)=>(a)=>1;
+const fb = (b,x)=>(b)=>x;
+
+const Ex = (a,b,y)=>(x)=>(y-Fx(a,b)(x))**2
+
+const Ea = (b,x,y)=>(a)=>(y-Fx(a,b)(x))**2
+const Eb = (a,x,y)=>(b)=>(y-Fx(a,b)(x))**2
+
+
+const ea = (b,x,y)=>(a)=>2 * fa(b,x)(a) * (y-Fx(a,b)(x))
+const eb = (a,x,y)=>(b)=>2 * fb(a,x)(b) * (y-Fx(a,b)(x))
+
+
+const dataFunc=Fx(Math.random(),1-2*Math.random());
+const dataNoise =0.1;
+const targetLoss= dataNoise**2*0.25;
+
+const DataLength = 50;
+
+var a = Math.random();
+var b = 1-2*Math.random();
+var x = 0;
+var y = 0;
+
+var t = 0;
+var trainSpeedFunc=t=>Math.max(0.1, 1*0.99**t)/DataLength;
+var trainSpeed = trainSpeedFunc(t);
+
+var passesPerStep = 1;
+
+
+
+
+let input = [];
+let output = [];
+for (let i=0; i < DataLength; i++){
+    let x = Math.random();
+    let y = dataFunc(x)+dataNoise-Math.random()*dataNoise*2;
+    input.push(x);
+    output.push(y);
+}
+
+const Ealla=b=>a=>input.map((x,i)=>{
+    let y = output[i];
+    return Ea(b,x,y)(a)
+}).reduce((p,c)=>p+c)/DataLength
+const Eallb=a=>b=>input.map((x,i)=>{
+    let y = output[i];
+    return Eb(a,x,y)(b)
+}).reduce((p,c)=>p+c)/DataLength
+
+
+var loss = 1;
+
+function xy(i=Math.floor(Math.random()*DataLength)){
+    let x = input[i];
+    let y = Fx(a,b)(x);
+    return {x,y}
+}
+
+function getVars(i=Math.floor(Math.random()*DataLength)){
+    return {a,b,...xy(i)}
+}
+
+
+onload=e=>{
+    log(null, Fx, fa , fb, Ex, ea, eb);
+    log("formula's");
+    displayStep();
+}
+
+var playing = false;
+function togglePlay(button){
+    if (playing){
+        button.innerText = 'play';
+        playing = false;
+    } else {
+        button.innerText = 'pauze';
+        requestAnimationFrame(frame);
+        playing = true;
+    }
+}
+
+function frame(){
+    step();
+    if (loss < targetLoss)playing=false;
+    if (playing){
+        requestAnimationFrame(frame);
+    }
+}
+function step(repeat=1){
+    loss = 0;
+    for (let k = 0; k < repeat; k++){
+        for (let j = 0; j < passesPerStep; j++){
+            trainSpeed = trainSpeedFunc(t)
+            lossA = 0;
+            lossB = 0;
+            for (let i = 0; i < DataLength; i++){
+                let j = Math.floor(Math.random()*DataLength);
+                let pos = xy(j);
+                x = pos.x;
+                y = output[j];
+                a+= ea(b,x,y)(a)*trainSpeed
+                b+= eb(a,x,y)(b)*trainSpeed
+                loss+=Ex(a,b,y)(x);
+            }
+            t++
+        }
+        loss /= DataLength;
+        displayStep();
+    }
+}
+
+function displayStep(){
+    draw(Eallb(a), b-0.1, b+0.1, 0.001, 400, 400, [b], [Eallb(a)(b)],10,10, 'loss b' );
+    draw(Ealla(b), a-0.1, a+0.1, 0.001, 400, 400, [a], [Ealla(b)(a)],10,10, 'loss a');
+    draw(Fx(a,b), 0, 1, 0.01, 400, 400, input, output, 10, 10, 'data');
+    log()
+    log(getVars(), Fx, fa , fb, Ex, ea, eb);
+    log(`taget loss: ${targetLoss.toPrecision(2)} loss: ${loss.toPrecision(2)}, speed: ${(trainSpeed*DataLength).toPrecision(2)}<br>
+    a:${a}<br>
+    b:${b}`);
+}
+    </script>
+    <style>
+        body{
+            background: gray;
+        }
+        canvas{
+            background: white;
+        }
+        #logElement{
+            background: lightblue;
+            text-shadow: 1px 1px 1px 1px white
+        }
+        #logElement div{
+            background-color:aquamarine;
+            margin: 10px;
+            display:inline-block;
+            width:min-content
+        }
+        #logElement p{
+            width: max-content;
+        }
+        #logElement canvas{
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div style="position: fixed">
+    <button onclick="togglePlay(this)">play</button>
+    <button onclick="step()">step</button><br>
+    <button onclick="step(parseInt(this.nextElementSibling.value) )">step N</button>
+    <input type="number" min=1 max=10000 value="1">
+    </div>
+    <br>
+    <!-- <canvas id=canvas width="400" height="400"></canvas> -->
+    <div id=logElement>
+        <hr>
+    </div>
+</body>
+</html>
